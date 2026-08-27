@@ -1,8 +1,7 @@
 # Teletubbies — Formación de practicantes iWA · Generación 2026
 
-Repositorio de trabajo del programa de formación de practicantes iWA, coordinado por Neto.
-Corre del 21 de agosto al 30 de octubre de 2026: sesión inicial + 10 semanas, con clases
-**lunes, martes y jueves** (remoto) y **viernes** presencial en oficina. Aquí se van agregando
+Repositorio de trabajo del programa de formación de practicantes iWA.
+Aquí se irán agregando
 los ejemplos, prácticas guiadas y ejercicios de cada sesión conforme se imparten.
 
 
