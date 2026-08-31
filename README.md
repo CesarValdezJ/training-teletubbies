@@ -32,7 +32,7 @@ Se marca con carpeta el bloque que ya tiene material subido.
 
 | # | Tema |
 |---|---|
-| 01 | JDK, JRE, JVM, compilación, tipos y control de flujo |
+| 01 | JDK, JRE, JVM, compilación, tipos y control de flujo ([`01-clase-jdk-jre-jvm`](01-clase-jdk-jre-jvm)) |
 | 02 | POO I: clases, objetos, encapsulación y constructores |
 | 03 | POO II: composición, interfaces y diseño de objetos ([`03-POO-II`](03-POO-II)) |
 
