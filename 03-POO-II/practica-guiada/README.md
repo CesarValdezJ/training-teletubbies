@@ -36,3 +36,5 @@ sin tocar `Inventario`.
 Nota: `buscarProductos()` y `listarProductos()` se quedan como métodos concretos de `Inventario`
 — no todo tiene que resolverse con una interfaz. La composición se usa donde hay una variación
 real de comportamiento (cómo se calcula el valor), no en cada método.
+
+This is a test line for a new git session
