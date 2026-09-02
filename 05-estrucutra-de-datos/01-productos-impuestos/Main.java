@@ -4,6 +4,8 @@ import java.util.stream.Collectors;
 
 public class Main {
     public static void main(String[] args) {
+        // AQUI DEBERIA DAR ERROR AL HACER MERGE
+        // SEGUNDA LINEA
         boolean training = false;
 
         FrontEndSimulator simulator = new FrontEndSimulator();
