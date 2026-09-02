@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 public class Main {
     public static void main(String[] args) {
+        // NOTA PARA GENERAR CONFLICTOS
         boolean training = false;
 
         FrontEndSimulator simulator = new FrontEndSimulator();
