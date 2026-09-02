@@ -1,21 +1,21 @@
 public class Main {
 
     public static void main(String[] args) {
-        final StackMala stack = new StackMala();
+        final BadStack stack = new BadStack();
         stack.push(1);
         stack.push(2);
         stack.push(3);
-        System.out.println("Stack tras 3 push: " + stack);
+        System.out.println("Stack after 3 pushes: " + stack);
 
         System.out.println("pop(): " + stack.pop());
-        System.out.println("Stack esperado [1, 2]: " + stack);
+        System.out.println("Expected stack [1, 2]: " + stack);
 
         stack.add(0, 99);
-        System.out.println("\nSe llamo add(0, 99), un metodo heredado de ArrayList que StackMala nunca quiso exponer.");
-        System.out.println("Stack 'roto' (99 se colo hasta el fondo sin pasar por push): " + stack);
+        System.out.println("\nCalled add(0, 99), a method inherited from ArrayList that BadStack never meant to expose.");
+        System.out.println("'Broken' stack (99 snuck in at the bottom without going through push()): " + stack);
 
-        System.out.println("\nEl problema no es un bug de este codigo: es que 'StackMala es un ArrayList' abre la puerta "
-                + "a TODOS los metodos de ArrayList (add(index,...), remove(index), set(...), sort(...)), "
-                + "y ninguno de ellos respeta la regla de un stack (solo entra y sale por un extremo).");
+        System.out.println("\nThe problem isn't a bug in this code: it's that 'BadStack is an ArrayList' opens the door "
+                + "to ALL of ArrayList's methods (add(index,...), remove(index), set(...), sort(...)), "
+                + "none of which respect the rule of a stack (only enter and exit from one end).");
     }
 }

@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 
 
-public class StackMala extends ArrayList<Integer> {
+public class BadStack extends ArrayList<Integer> {
 
     public void push(final int value) {
         add(value);

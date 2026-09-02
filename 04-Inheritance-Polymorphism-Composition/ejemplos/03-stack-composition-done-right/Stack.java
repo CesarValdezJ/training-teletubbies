@@ -11,7 +11,7 @@ public class Stack {
 
     public int pop() {
         if (data.isEmpty()) {
-            throw new IllegalStateException("El stack esta vacio.");
+            throw new IllegalStateException("The stack is empty.");
         }
         return data.remove(data.size() - 1);
     }

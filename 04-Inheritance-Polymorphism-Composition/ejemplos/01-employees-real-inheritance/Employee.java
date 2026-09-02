@@ -1,9 +1,9 @@
-public abstract class Empleado {
+public abstract class Employee {
 
     private final String name;
     private final double baseSalary;
 
-    public Empleado(final String name, final double baseSalary) {
+    public Employee(final String name, final double baseSalary) {
         this.name = name;
         this.baseSalary = baseSalary;
     }
