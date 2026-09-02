@@ -6,6 +6,7 @@ public class Main {
     public static void main(String[] args) {
         // AQUI DEBERIA DAR ERROR AL HACER MERGE
         // SEGUNDA LINEA
+        // NOTA PARA GENERAR CONFLICTOS
         boolean training = false;
 
         FrontEndSimulator simulator = new FrontEndSimulator();
