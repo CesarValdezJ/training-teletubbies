@@ -40,7 +40,7 @@ Se marca con carpeta el bloque que ya tiene material subido.
 
 | # | Tema |
 |---|---|
-| 04 | Herencia, polimorfismo y composición: cuándo usar cada uno |
+| 04 | Herencia, polimorfismo y composición: cuándo usar cada uno ([`04-Inheritance-Polymorphism-Composition`](04-Inheritance-Polymorphism-Composition)) |
 | 05 | Colecciones, genéricos, equals y hashCode |
 | 06 | Excepciones, depuración, código limpio y pruebas JUnit |
 
