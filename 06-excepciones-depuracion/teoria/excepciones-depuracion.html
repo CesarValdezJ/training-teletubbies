@@ -489,7 +489,7 @@
           <div class="card k-green"><span class="t">Pocos parámetros</span><span class="d">0–2 idealmente. Muchos argumentos suelen esconder un objeto que falta.</span></div>
           <div class="card k-green"><span class="t">Manejo de errores explícito</span><span class="d">Excepciones claras y constantes con nombre, en vez de <code>null</code>, códigos o números mágicos.</span></div>
         </div>
-        <p class="lede">Objetivo común: que quien lo lea después — tú, en un mes — lo entienda sin arqueología.</p>
+        <p class="lede">Objetivo común: que quien lo lea después — tú, en un mes — lo entienda a la primera.</p>
       </section>
 
       <!-- 12 -->
@@ -506,6 +506,7 @@
     <span class="fn">assertEquals</span>(8.0, average, 1e-9);
 }</div>
         <p class="lede">El nombre describe el <strong>caso</strong>, no el método. Una idea por prueba: si necesitas "y" en el nombre, son dos.</p>
+        <p class="lede" style="font-size:0.85rem">La misma estructura se llama también <strong>Given · When · Then</strong> (viene de BDD): <em>given</em> = arrange, <em>when</em> = act, <em>then</em> = assert.</p>
       </section>
 
       <!-- 13 -->
@@ -528,19 +529,6 @@
       </section>
 
       <!-- 14 -->
-      <section class="slide" data-section="rojo → verde">
-        <span class="kicker">pruebas junit 5 · 04</span>
-        <h2>La prueba primero <span class="p">prueba el bug</span></h2>
-        <ol class="agenda">
-          <li><span class="n"></span> Escribe la prueba del caso límite (nota justo en la frontera: <code>&gt;=</code> vs <code>&gt;</code>)</li>
-          <li><span class="n"></span> Míra­la fallar &mdash; <strong>rojo</strong>. Ya sabes que la prueba sirve y que el bug existe.</li>
-          <li><span class="n"></span> Arregla el defecto</li>
-          <li><span class="n"></span> Míra­la pasar &mdash; <strong>verde</strong></li>
-        </ol>
-        <p class="lede">Casos límite (<em>edge cases</em>) de siempre: <strong>vacío, null, cero</strong>, y el valor justo en la frontera.</p>
-      </section>
-
-      <!-- 15 -->
       <section class="slide" data-section="cómo correr">
         <span class="kicker">herramientas</span>
         <h2>Proyecto Maven — <code>pom.xml</code> trae JUnit</h2>
@@ -557,7 +545,7 @@
 ./mvnw compile exec:java     <span class="c"># corre la app</span></div>
       </section>
 
-      <!-- 16 -->
+      <!-- 15 -->
       <section class="slide" data-section="práctica guiada">
         <span class="kicker">sigue</span>
         <h2>Práctica guiada — Calculadora de calificaciones</h2>
@@ -570,7 +558,7 @@
         <p class="lede" style="font-size:0.85rem">El defecto 3 no lanza ninguna excepción: se descubre escribiendo la prueba del caso límite.</p>
       </section>
 
-      <!-- 17 -->
+      <!-- 16 -->
       <section class="slide" data-section="ejercicio individual">
         <span class="kicker">después</span>
         <h2>Ejercicio individual — Procesador de pedidos</h2>
@@ -580,7 +568,23 @@
           <span class="chip red">descuento mal aplicado</span>
           <span class="chip red">off-by-one al listar las líneas</span>
         </div>
-        <p class="lede" style="font-size:0.85rem">Tarea: dos pruebas de caso límite más + una excepción propia con mensaje útil.</p>
+      </section>
+
+      <!-- 17 -->
+      <section class="slide" data-section="tarea">
+        <span class="kicker">para la próxima sesión</span>
+        <h2>Tarea — dos ejercicios</h2>
+        <div class="grid g2">
+          <div class="card k-red">
+            <span class="t">1 · Cuenta bancaria — diagnosticar</span>
+            <span class="d"><code>BankAccount</code> deja el saldo en negativo, acepta depósitos negativos y <code>transferTo</code> esquiva la regla de sobregiro. Encuentra los 3 defectos, arréglalos con validación explícita + una excepción propia (<code>InsufficientFundsException</code>) y entrega ≥ 4 pruebas — el saldo nunca debe quedar inconsistente y <code>transferTo</code> no puede duplicar la regla de <code>withdraw</code>.</span>
+          </div>
+          <div class="card k-green">
+            <span class="t">2 · Password policy — refactorizar</span>
+            <span class="d"><code>PasswordPolicy.check()</code> funciona pero es feo: <code>if</code> anidados, números mágicos, nombres de una letra, un <code>catch</code> vacío. Aplícale las prácticas de código limpio <strong>sin cambiar el comportamiento</strong> — las 7 pruebas de caracterización ya están y deben seguir en verde sin tocarlas.</span>
+          </div>
+        </div>
+        <p class="lede">Instrucciones completas y proyectos Maven en <code>tarea/README.md</code>.</p>
       </section>
 
     </div>
