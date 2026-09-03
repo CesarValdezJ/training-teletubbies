@@ -1,7 +1,6 @@
 # Tarea — para la próxima sesión
 
-Dos ejercicios, uno de cada mitad de la sesión. Se revisan al inicio de la sesión 07.
-Entrégalos en tu fork / rama.
+Dos ejercicios, uno de cada mitad de la sesión.
 
 Ambos son proyectos Maven con wrapper: `./mvnw test` (o `mvnw.cmd` en Windows), o los
 botones de *Run* del IDE. Maven se ve a fondo en la sesión 08 — aquí solo lo usas para
