@@ -42,7 +42,7 @@ Se marca con carpeta el bloque que ya tiene material subido.
 |---|---|
 | 04 | Herencia, polimorfismo y composición: cuándo usar cada uno ([`04-Inheritance-Polymorphism-Composition`](04-Inheritance-Polymorphism-Composition)) |
 | 05 | Colecciones, genéricos, equals y hashCode |
-| 06 | Excepciones, depuración, código limpio y pruebas JUnit |
+| 06 | Excepciones, depuración, código limpio y pruebas JUnit ([`06-excepciones-depuracion`](06-excepciones-depuracion)) |
 
 ### Semana 3 · Spring
 
