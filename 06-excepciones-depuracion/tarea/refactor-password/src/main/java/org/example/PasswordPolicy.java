@@ -10,46 +10,55 @@ package org.example;
  */
 public class PasswordPolicy {
 
-    public String check(String p, String u) {
-        String r = "";
-        int l = 0;
-        try {
-            l = p.length();
-        } catch (Exception e) {
+    private static final int MIN_LENGTH = 8;
+    private static final String TOO_SHORT = "TOO_SHORT";
+    private static final String NO_DIGIT = "NO_DIGIT";
+    private static final String NO_UPPERCASE = "NO_UPPERCASE";
+    private static final String CONTAINS_USERNAME = "CONTAINS_USERNAME";
+    private static final String OK = "OK";
+
+    public String check(final String password, final String username) {
+        if (password == null) {
+            return TOO_SHORT;
         }
-        if (p == null) {
-            r = "TOO_SHORT";
-        } else {
-            if (l < 8) {
-                r = "TOO_SHORT";
-            } else {
-                boolean f1 = false;
-                for (int i = 0; i < p.length(); i++) {
-                    if (p.charAt(i) >= '0' && p.charAt(i) <= '9') {
-                        f1 = true;
-                    }
-                }
-                if (f1 == false) {
-                    r = "NO_DIGIT";
-                } else {
-                    boolean f2 = false;
-                    for (int i = 0; i < p.length(); i++) {
-                        if (p.charAt(i) >= 'A' && p.charAt(i) <= 'Z') {
-                            f2 = true;
-                        }
-                    }
-                    if (!f2) {
-                        r = "NO_UPPERCASE";
-                    } else {
-                        if (u != null && p.toLowerCase().contains(u.toLowerCase())) {
-                            r = "CONTAINS_USERNAME";
-                        } else {
-                            r = "OK";
-                        }
-                    }
-                }
+        if (isTooShort(password)) {
+            return TOO_SHORT;
+        }
+        if (!hasDigit(password)) {
+            return NO_DIGIT;
+        }
+        if (!hasUppercase(password)) {
+            return NO_UPPERCASE;
+        }
+        if (containsUsername(password, username)) {
+            return CONTAINS_USERNAME;
+        }
+        return OK;
+    }
+    private boolean isTooShort(String password) {
+        return password.length() < MIN_LENGTH;
+    }
+
+    private boolean hasDigit(String password) {
+        for (int i = 0; i < password.length(); i++) {
+            if (password.charAt(i) >= '0' && password.charAt(i) <= '9') {
+                return true;
             }
         }
-        return r;
+
+        return false;
+    }
+
+    private boolean hasUppercase(String password) {
+        for (int i = 0; i < password.length(); i++) {
+            if (password.charAt(i) >= 'A' && password.charAt(i) <= 'Z') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsUsername(String password, String username) {
+        return username != null && password.toLowerCase().contains(username.toLowerCase());
     }
 }
