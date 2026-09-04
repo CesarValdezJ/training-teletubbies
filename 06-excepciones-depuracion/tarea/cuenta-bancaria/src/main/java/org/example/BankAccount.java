@@ -14,27 +14,42 @@ public class BankAccount {
         this.balance = openingBalance;
     }
 
-    public double getBalance() {
+    final public double getBalance() {
         return balance;
     }
 
     /** Add money to the account. */
-    public void deposit(double amount) {
+    final public void deposit(final double amount) {
+        if(amount <= 0) {
+            throw new IllegalArgumentException("Deposit amount must be greater than 0");//debe ser mayor que 0, no "no negativo".
+        }
         // DEFECT: a negative amount is accepted and quietly drains the account.
         balance += amount;
     }
 
     /** Take money out of the account. */
-    public void withdraw(double amount) {
+    public void withdraw(final double amount) {
         // DEFECT: no check for sufficient funds - the balance can go negative.
+        if(amount <= 0) {
+            throw new IllegalArgumentException("Withdrawal amount must be greater than 0");
+        }
+        if (amount>balance) {
+            throw new InsufficientFundsException("Insufficient funds: tried to withdraw" + amount+", but balance is "+ balance);
+        }
         balance -= amount;
     }
 
+
     /** Move money from this account to another one. */
-    public void transferTo(BankAccount target, double amount) {
+    public void transferTo(final BankAccount target, final double amount) {
         // DEFECT: touches the balances directly instead of reusing withdraw()/deposit(),
+        if (target==null){
+            throw new IllegalArgumentException("Target account cannot be null");
+        }
+
         // so any rule added to those methods is bypassed here.
-        this.balance -= amount;
-        target.balance += amount;
+        withdraw(amount);
+        target.deposit(amount);
+
     }
 }
