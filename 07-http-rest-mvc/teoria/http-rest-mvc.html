@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP, REST, MVC y separación de capas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap">
+
+<style>
+  /* ============ Tokens — "API docs" theme (estilo Swagger/OpenAPI) ============ */
+  :root {
+    --bg:      #f6f7f9;
+    --panel:   #ffffff;
+    --panel-2: #eef0f3;
+    --ink:     #1c2029;
+    --dim:     #6b7280;
+    --line:    #e3e6ea;
+    --line-2:  #cfd4db;
+
+    --accent:    #ff6c37;
+    --accent-bg: rgba(255,108,55,0.10);
+
+    --get:     #2f6fed; --get-bg:    rgba(47,111,237,0.10);
+    --post:    #16a34a; --post-bg:   rgba(22,163,74,0.10);
+    --put:     #d97706; --put-bg:    rgba(217,119,6,0.10);
+    --delete:  #dc2626; --delete-bg: rgba(220,38,38,0.10);
+    --patch:   #0d9488; --patch-bg:  rgba(13,148,136,0.10);
+
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --sans: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:      #14161b;
+      --panel:   #1b1e25;
+      --panel-2: #23262f;
+      --ink:     #e8e9ec;
+      --dim:     #8b93a1;
+      --line:    #2b2f39;
+      --line-2:  #3a3f4b;
+
+      --get:     #5b9bff; --get-bg:    rgba(91,155,255,0.14);
+      --post:    #3ecf76; --post-bg:   rgba(62,207,118,0.14);
+      --put:     #f0a63a; --put-bg:    rgba(240,166,58,0.14);
+      --delete:  #f0605a; --delete-bg: rgba(240,96,90,0.14);
+      --patch:   #35c2b2; --patch-bg:  rgba(53,194,178,0.14);
+      --accent-bg: rgba(255,108,55,0.16);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font-family: var(--sans);
+    overflow: hidden;
+  }
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0.9rem; min-height: 100vh; padding: 1.2rem;
+  }
+
+  h1, h2 { margin: 0; font-weight: 700; text-wrap: balance; }
+  p { margin: 0; text-wrap: pretty; }
+  code { font-family: var(--mono); font-size: 0.88em; }
+
+  /* ============ Doc window ============ */
+  .win {
+    width: min(96vw, 1220px);
+    aspect-ratio: 16 / 9.2;
+    max-height: 86vh;
+    background: var(--panel);
+    border: 1px solid var(--line-2);
+    border-radius: 10px;
+    box-shadow: 0 24px 60px -30px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* top bar — fixed dark, like a docs-tool header regardless of theme */
+  .topbar {
+    height: 44px; flex: none;
+    display: flex; align-items: center; gap: 0.9rem;
+    padding: 0 1rem;
+    background: #171a21;
+    border-bottom: 1px solid #000;
+    font-size: 0.82rem; color: #fff;
+  }
+  .topbar .brand { font-weight: 700; display: flex; align-items: center; gap: 0.45rem; }
+  .topbar .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); display: block; }
+  .topbar .specline {
+    margin-left: auto; font-family: var(--mono); font-size: 0.72rem; color: #9aa4b2;
+    display: flex; gap: 0.5rem; align-items: center;
+  }
+  .topbar .specline b { color: #fff; font-weight: 500; }
+
+  /* body: toc + stage */
+  .frame { flex: 1; display: flex; min-height: 0; }
+
+  .toc {
+    flex: none; width: 210px;
+    background: #171a21;
+    border-right: 1px solid #000;
+    padding: 0.7rem 0;
+    overflow-y: auto;
+  }
+  .toc .item {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.42rem 0.9rem;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+  }
+  .toc .item .p {
+    font-family: var(--mono); font-size: 0.72rem; color: #8890a0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .toc .item.active { background: rgba(255,255,255,0.06); border-left-color: var(--accent); }
+  .toc .item.active .p { color: #fff; }
+  .toc .item .mpill {
+    font-family: var(--mono); font-size: 0.6rem; font-weight: 700;
+    padding: 0.08rem 0.32rem; border-radius: 3px; flex: none;
+    text-transform: uppercase; letter-spacing: 0.02em;
+  }
+
+  .stage { position: relative; flex: 1; min-width: 0; background: var(--bg); }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: clamp(0.7rem, 1.7vh, 1.3rem);
+    padding: clamp(1.5rem, 3.4vw, 2.8rem) clamp(1.8rem, 4.2vw, 3.2rem);
+    opacity: 0; transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .slide.active { opacity: 1; transform: none; pointer-events: auto; }
+  @media (prefers-reduced-motion: reduce) { .slide { transition: none; } }
+
+  /* operation header: method pill + path, like an OpenAPI operation block */
+  .ophead { display: flex; align-items: center; gap: 0.7rem; }
+  .ophead .path { font-family: var(--mono); font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+  .kicker { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); letter-spacing: 0.03em; }
+
+  .slide h2 {
+    font-size: clamp(1.35rem, 1.7vw + 0.85rem, 2.05rem);
+    line-height: 1.22; color: var(--ink);
+  }
+  .slide h2 code { color: var(--accent); }
+
+  .lede {
+    font-size: clamp(0.9rem, 0.4vw + 0.8rem, 1.02rem);
+    color: var(--dim); max-width: 70ch; line-height: 1.6;
+  }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* pills — HTTP method color coding */
+  .pill {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+    padding: 0.28rem 0.55rem; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.03em; flex: none;
+  }
+  .pill.get    { background: var(--get-bg);    color: var(--get); }
+  .pill.post   { background: var(--post-bg);   color: var(--post); }
+  .pill.put    { background: var(--put-bg);    color: var(--put); }
+  .pill.delete { background: var(--delete-bg); color: var(--delete); }
+  .pill.patch  { background: var(--patch-bg);  color: var(--patch); }
+
+  /* ============ Cover ============ */
+  .cover { align-items: flex-start; }
+  .cover .logo {
+    font-family: var(--mono); font-size: 0.78rem; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 5px; padding: 0.2rem 0.55rem;
+  }
+  .cover h1 {
+    font-size: clamp(1.7rem, 2.8vw + 1rem, 2.7rem);
+    line-height: 1.2; letter-spacing: -0.01em;
+  }
+  .cover .meta {
+    font-family: var(--mono); font-size: 0.76rem; color: var(--dim);
+    display: flex; flex-wrap: wrap; gap: 1.2rem; margin-top: 0.2rem;
+  }
+  .cover .meta b { color: var(--accent); font-weight: 500; }
+
+  /* ============ Example / code panel (like "Example Value") ============ */
+  .exlabel {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--dim); display: block; margin-bottom: 0.3rem;
+  }
+  .code {
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.6;
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 7px; padding: 0.75rem 0.95rem;
+    overflow-x: auto; white-space: pre; color: var(--ink);
+  }
+  .diagram {
+    width: 100%; max-width: 720px; height: auto;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 7px; padding: 0.5rem;
+  }
+  .diagram .box   { fill: var(--panel-2); stroke: var(--line-2); }
+  .diagram .inner { fill: var(--panel);   stroke: var(--line-2); }
+  .diagram .hair  { stroke: var(--line); }
+  .diagram .dotR  { fill: var(--delete); }
+  .diagram .dotY  { fill: var(--put); }
+  .diagram .dotG  { fill: var(--post); }
+  .diagram .name  { fill: var(--ink); font-family: var(--mono); font-size: 15px; font-weight: 700; }
+  .diagram .sub   { fill: var(--dim); font-family: var(--sans); font-size: 11px; }
+  .diagram .reqLine { stroke: var(--get);  stroke-width: 2; }
+  .diagram .resLine { stroke: var(--post); stroke-width: 2; }
+  .diagram .reqLbl  { fill: var(--get);  font-family: var(--mono); font-size: 12px; font-weight: 700; }
+  .diagram .resLbl  { fill: var(--post); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+  .diagram .ex      { fill: var(--dim);  font-family: var(--mono); font-size: 11px; }
+  .diagram .arrowR  { fill: var(--get); }
+  .diagram .arrowG  { fill: var(--post); }
+
+  .code .c   { color: var(--dim); }
+  .code .k   { color: var(--accent); }
+  .code .str { color: var(--post); }
+  .code .fn  { color: var(--get); }
+
+  /* ============ Cards ============ */
+  .grid { display: grid; gap: 0.8rem; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+
+  .card {
+    border: 1px solid var(--line); border-radius: 7px;
+    background: var(--panel-2); padding: 0.8rem 0.9rem;
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .card .t { font-family: var(--mono); font-size: 0.86rem; font-weight: 700; color: var(--ink); }
+  .card .d { font-size: 0.79rem; color: var(--dim); line-height: 1.45; }
+  .card.k-get    { border-top: 3px solid var(--get); }
+  .card.k-post   { border-top: 3px solid var(--post); }
+  .card.k-put    { border-top: 3px solid var(--put); }
+  .card.k-delete { border-top: 3px solid var(--delete); }
+
+  /* list */
+  ul.list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+  ul.list li {
+    font-size: 0.88rem; color: var(--dim); line-height: 1.5;
+    padding-left: 1.4rem; position: relative;
+  }
+  ul.list li::before {
+    content: "→"; position: absolute; left: 0; color: var(--accent);
+    font-family: var(--mono);
+  }
+  ul.list li strong { color: var(--ink); font-weight: 600; }
+
+  /* ============ Request-flow timeline ============ */
+  .flow { position: relative; display: flex; flex-direction: column; padding-left: 2.3rem; }
+  .flow::before {
+    content: ""; position: absolute; left: 0.92rem; top: 0.5rem; bottom: 0.5rem;
+    width: 2px; background: var(--line-2);
+  }
+  .fnode { position: relative; padding: 0.55rem 0 0.55rem 1rem; }
+  .fnode .dot {
+    position: absolute; left: -2.3rem; top: 0.5rem;
+    width: 1.7rem; height: 1.7rem; border-radius: 50%;
+    background: var(--panel); border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 700; color: var(--accent);
+  }
+  .fnode.first .dot { background: var(--accent); color: #fff; }
+  .fnode .ft { font-family: var(--mono); font-weight: 700; font-size: 0.9rem; color: var(--ink); }
+  .fnode .fd { font-size: 0.81rem; color: var(--dim); line-height: 1.5; margin-top: 0.12rem; }
+
+  /* table — schema style */
+  .twrap { overflow-x: auto; }
+  table.cmp { border-collapse: collapse; width: 100%; font-size: 0.83rem; }
+  table.cmp th, table.cmp td {
+    border-bottom: 1px solid var(--line); padding: 0.5rem 0.7rem;
+    text-align: left; vertical-align: top;
+  }
+  table.cmp thead th {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--dim); background: var(--panel-2); font-weight: 500;
+    border-bottom: 1px solid var(--line-2);
+  }
+  table.cmp tbody th { font-family: var(--mono); font-weight: 600; width: 20%; color: var(--ink); }
+
+  ol.agenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  ol.agenda li { display: flex; align-items: baseline; gap: 0.75rem; font-size: 0.96rem; color: var(--ink); }
+  ol.agenda .n { font-family: var(--mono); font-size: 0.78rem; color: var(--accent); }
+  ol.agenda .n::before { content: "0" attr(data-i) "  "; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip {
+    font-family: var(--mono); font-size: 0.74rem; color: var(--ink);
+    border: 1px solid var(--line-2); background: var(--panel-2);
+    border-radius: 5px; padding: 0.3rem 0.6rem;
+  }
+
+  .caption { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ============ Status bar ============ */
+  .statusbar {
+    height: 32px; flex: none;
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0 0.9rem;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--mono); font-size: 0.7rem;
+  }
+  .statusbar .sb-path { flex: 1; opacity: 0.95; }
+  .statusbar .runner { display: flex; gap: 4px; align-items: center; }
+  .statusbar .runner i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); display: block; }
+  .statusbar .runner i.done { background: #fff; }
+  .statusbar .count { font-variant-numeric: tabular-nums; opacity: 0.95; }
+
+  /* ============ Controls ============ */
+  .controls { display: flex; align-items: center; gap: 0.8rem; }
+  .navbtn {
+    width: 32px; height: 32px; border-radius: 6px;
+    border: 1px solid var(--line-2); background: var(--panel); color: var(--ink);
+    font-family: var(--mono); font-size: 0.95rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .navbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .navbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .navbtn:disabled { opacity: 0.3; cursor: default; }
+  .hint { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+
+  @media (max-width: 760px) {
+    .g2, .g3 { grid-template-columns: 1fr; }
+    .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="win">
+  <div class="topbar">
+    <span class="brand"><span class="dot"></span> API Explorer</span>
+    <span class="specline">openapi 3.0.3 · <b id="specName">sesión 07</b></span>
+  </div>
+
+  <div class="frame">
+    <nav class="toc" id="toc"></nav>
+
+    <div class="stage" id="stage">
+
+      <!-- 1 -->
+      <section class="slide cover" data-section="portada" data-method="" data-path="/">
+        <span class="logo">spring · sesión teórica</span>
+        <h1>HTTP, REST, MVC<br>y separación de capas</h1>
+        <p class="lede">Marco conceptual para pasar de programas de consola a una aplicación web mantenible: cómo viaja una petición y cómo se diseña el contrato de un endpoint antes de programarlo.</p>
+        <div class="meta">
+          <span><b>15</b> min</span>
+          <span><b>antes</b> de la práctica guiada</span>
+          <span><b>sin código</b> — solo diseño</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section class="slide" data-section="agenda" data-method="get" data-path="/agenda">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/agenda</span></div>
+        <h2>Agenda</h2>
+        <ol class="agenda">
+          <li><span class="n" data-i="1"></span> HTTP — petición, respuesta, métodos y códigos de estado</li>
+          <li><span class="n" data-i="2"></span> REST y API — qué contrato expone un servidor</li>
+          <li><span class="n" data-i="3"></span> El recorrido de una petición — de cliente a datos y de regreso</li>
+          <li><span class="n" data-i="4"></span> MVC y separación de capas — por qué no va todo en un archivo</li>
+          <li><span class="n" data-i="5"></span> Contrato de endpoint — cómo se diseña antes de programarlo</li>
+        </ol>
+        <p class="lede">Objetivo: un <strong>diagrama del recorrido de una petición</strong> y el <strong>contrato de un endpoint</strong>. Implementarlo en código llega en las sesiones 08 y 09.</p>
+      </section>
+
+      <!-- 3 -->
+      <section class="slide" data-section="http" data-method="get" data-path="/http/overview">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/http/overview</span></div>
+        <h2>¿Qué es HTTP?</h2>
+        <p class="lede">HTTP (HyperText Transfer Protocol) es el protocolo de texto sobre el que habla la web: un <strong>cliente</strong> (navegador, app móvil, otro backend) envía una <strong>petición</strong> a un <strong>servidor</strong>, que responde con una <strong>respuesta</strong>. Es <strong>sin estado</strong> (stateless): cada petición se resuelve con lo que ella misma trae — el servidor no "recuerda" la anterior por sí solo.</p>
+        <span class="exlabel">Ida y vuelta</span>
+        <svg class="diagram" viewBox="0 0 680 220" role="img" aria-label="Un cliente envía una petición HTTP a un servidor, que devuelve una respuesta HTTP.">
+          <defs>
+            <marker id="ahR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path class="arrowR" d="M0,0 L10,5 L0,10 z"/>
+            </marker>
+            <marker id="ahG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path class="arrowG" d="M0,0 L10,5 L0,10 z"/>
+            </marker>
+          </defs>
+
+          <!-- Cliente -->
+          <rect class="box" x="8" y="56" width="188" height="96" rx="10"/>
+          <rect class="inner" x="34" y="76" width="136" height="54" rx="6"/>
+          <circle class="dotR" cx="46" cy="88" r="3"/>
+          <circle class="dotY" cx="56" cy="88" r="3"/>
+          <circle class="dotG" cx="66" cy="88" r="3"/>
+          <line class="hair" x1="34" y1="96" x2="170" y2="96"/>
+          <text class="name" x="102" y="176" text-anchor="middle">Cliente</text>
+          <text class="sub"  x="102" y="196" text-anchor="middle">navegador · app · otro backend</text>
+
+          <!-- Servidor -->
+          <rect class="box" x="484" y="56" width="188" height="96" rx="10"/>
+          <rect class="inner" x="540" y="72" width="76" height="16" rx="3"/>
+          <rect class="inner" x="540" y="94" width="76" height="16" rx="3"/>
+          <rect class="inner" x="540" y="116" width="76" height="16" rx="3"/>
+          <circle class="dotG" cx="550" cy="80" r="2.5"/>
+          <circle class="dotG" cx="550" cy="102" r="2.5"/>
+          <circle class="dotG" cx="550" cy="124" r="2.5"/>
+          <text class="name" x="578" y="176" text-anchor="middle">Servidor</text>
+          <text class="sub"  x="578" y="196" text-anchor="middle">recibe, procesa, responde</text>
+
+          <!-- request -->
+          <line class="reqLine" x1="204" y1="82" x2="474" y2="82" marker-end="url(#ahR)"/>
+          <text class="reqLbl" x="340" y="72" text-anchor="middle">HTTP request</text>
+          <text class="ex"     x="340" y="99" text-anchor="middle">GET /books/42</text>
+
+          <!-- response -->
+          <line class="resLine" x1="476" y1="126" x2="206" y2="126" marker-end="url(#ahG)"/>
+          <text class="resLbl" x="340" y="146" text-anchor="middle">HTTP response</text>
+          <text class="ex"     x="340" y="163" text-anchor="middle">200 OK + JSON</text>
+        </svg>
+      </section>
+
+      <!-- 4 -->
+      <section class="slide" data-section="métodos http" data-method="get" data-path="/http/methods">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/http/methods</span></div>
+        <h2>Métodos HTTP e idempotencia</h2>
+        <div class="twrap">
+          <table class="cmp">
+            <thead><tr><th>método</th><th>uso</th><th>¿body?</th><th>¿idempotente?</th></tr></thead>
+            <tbody>
+              <tr><th><span class="pill get" style="padding:.1rem .35rem">GET</span></th><td>obtener un recurso</td><td>no</td><td>sí</td></tr>
+              <tr><th><span class="pill post" style="padding:.1rem .35rem">POST</span></th><td>crear un recurso nuevo</td><td>sí</td><td>no</td></tr>
+              <tr><th><span class="pill put" style="padding:.1rem .35rem">PUT</span></th><td>reemplazar un recurso completo</td><td>sí</td><td>sí</td></tr>
+              <tr><th><span class="pill patch" style="padding:.1rem .35rem">PATCH</span></th><td>modificar parcialmente</td><td>sí</td><td>no, por convención</td></tr>
+              <tr><th><span class="pill delete" style="padding:.1rem .35rem">DELETE</span></th><td>eliminar un recurso</td><td>no, normalmente</td><td>sí</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="lede" style="font-size:0.83rem"><strong>Idempotente:</strong> repetir la misma petición varias veces deja el recurso en el mismo estado que hacerla una sola vez.</p>
+      </section>
+
+      <!-- 5 -->
+      <section class="slide" data-section="códigos de estado" data-method="get" data-path="/http/status-codes">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/http/status-codes</span></div>
+        <h2>Códigos de estado</h2>
+        <div class="twrap">
+          <table class="cmp">
+            <thead><tr><th>rango</th><th>significado</th><th>ejemplos</th></tr></thead>
+            <tbody>
+              <tr><th style="color:var(--post)">2xx</th><td>éxito</td><td><code>200</code> OK · <code>201</code> Created · <code>204</code> No Content</td></tr>
+              <tr><th style="color:var(--get)">3xx</th><td>redirección</td><td><code>301</code> Moved Permanently · <code>304</code> Not Modified</td></tr>
+              <tr><th style="color:var(--put)">4xx</th><td>error del cliente</td><td><code>400</code> Bad Request · <code>401</code> Unauthorized · <code>403</code> Forbidden · <code>404</code> Not Found · <code>422</code> Unprocessable Entity</td></tr>
+              <tr><th style="color:var(--delete)">5xx</th><td>error del servidor</td><td><code>500</code> Internal Server Error · <code>503</code> Service Unavailable</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="lede" style="font-size:0.83rem">El código nunca sustituye al mensaje: el body de error explica <em>qué</em> pasó — el código dice <em>a quién</em> le toca actuar (cliente o servidor).</p>
+      </section>
+
+      <!-- 6 -->
+      <section class="slide" data-section="anatomía de una petición" data-method="get" data-path="/http/request-response">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/http/request-response</span></div>
+        <h2>Anatomía de una petición y una respuesta</h2>
+        <div class="grid g2">
+          <div>
+            <span class="exlabel">Petición</span>
+            <div class="code">GET /books/42?fields=title,author HTTP/1.1
+Host: api.biblioteca.com
+Authorization: Bearer &lt;token&gt;</div>
+          </div>
+          <div>
+            <span class="exlabel">Respuesta</span>
+            <div class="code">HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "id": 42, "title": "Cien años de soledad",
+  "author": "García Márquez" }</div>
+          </div>
+        </div>
+        <ul class="list" style="gap:0.3rem">
+          <li><strong>Query params</strong> van en la URL (<code>?clave=valor</code>) — filtros, paginación, orden.</li>
+          <li><strong>Body</strong> (cuerpo) viaja casi siempre en JSON — se usa en POST/PUT/PATCH, no en GET.</li>
+          <li><strong>Headers</strong> llevan metadatos: autenticación, tipo de contenido, formato aceptado.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section class="slide" data-section="rest y api" data-method="get" data-path="/rest/principles">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/rest/principles</span></div>
+        <h2>¿Qué es REST? ¿Qué es una API?</h2>
+        <p class="lede">Una <strong>API</strong> (Application Programming Interface) es el contrato que un servidor expone para que otros programas lo usen sin ver su código interno. <strong>REST</strong> (REpresentational State Transfer) es un estilo para diseñar esa API sobre HTTP.</p>
+        <div class="grid g2">
+          <div class="card k-get"><span class="t">Recursos como sustantivos</span><span class="d"><code>/books</code>, <code>/books/42</code> — no <code>/getBook</code> ni verbos en la ruta.</span></div>
+          <div class="card k-get"><span class="t">El método dice la acción</span><span class="d">La URI identifica el recurso; <code>GET /books</code> vs <code>POST /books</code> dicen qué hacer con él.</span></div>
+          <div class="card k-get"><span class="t">Sin estado</span><span class="d">Cada petición trae todo lo necesario (ej. el token) — el servidor no guarda sesión entre peticiones.</span></div>
+          <div class="card k-get"><span class="t">Representaciones</span><span class="d">El mismo recurso se puede entregar en distintos formatos — en la práctica, casi siempre JSON.</span></div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section class="slide" data-section="recorrido de una petición" data-method="get" data-path="/architecture/request-flow">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/architecture/request-flow</span></div>
+        <h2>El recorrido de una petición <code>GET /books/{id}</code></h2>
+        <div class="flow">
+          <div class="fnode first"><span class="dot">1</span><div class="ft">Cliente</div><div class="fd">arma la petición (URL, método, headers) y la envía por HTTP.</div></div>
+          <div class="fnode"><span class="dot">2</span><div class="ft">Controller</div><div class="fd">recibe la petición, valida su forma y la traduce a una llamada del dominio.</div></div>
+          <div class="fnode"><span class="dot">3</span><div class="ft">Service</div><div class="fd">aplica las reglas de negocio — no sabe nada de HTTP.</div></div>
+          <div class="fnode"><span class="dot">4</span><div class="ft">Repository / Model</div><div class="fd">obtiene o guarda datos (memoria, base de datos).</div></div>
+        </div>
+        <p class="lede" style="font-size:0.83rem">La respuesta <strong>sube por las mismas capas en sentido inverso</strong>: Repository → Service → Controller → Cliente. Cada capa solo conoce a la de al lado.</p>
+      </section>
+
+      <!-- 9 -->
+      <section class="slide" data-section="mvc" data-method="get" data-path="/architecture/mvc">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/architecture/mvc</span></div>
+        <h2>MVC — Modelo · Vista · Controlador</h2>
+        <div class="grid g3">
+          <div class="card k-get"><span class="t">Model</span><span class="d">Los datos y las reglas del dominio: entidades, validaciones, lógica de negocio.</span></div>
+          <div class="card k-post"><span class="t">View</span><span class="d">Lo que recibe quien consume la API. En REST no hay pantallas: la "vista" es el JSON de salida.</span></div>
+          <div class="card k-put"><span class="t">Controller</span><span class="d">Recibe la petición HTTP y coordina entre Model y View — decide qué llamar y qué responder.</span></div>
+        </div>
+        <p class="lede">El patrón nació para interfaces gráficas; en una API REST se adapta: no hay HTML, pero la separación de responsabilidades es la misma idea.</p>
+      </section>
+
+      <!-- 10 -->
+      <section class="slide" data-section="separación de capas" data-method="get" data-path="/architecture/layers">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/architecture/layers</span></div>
+        <h2>Separación de capas — para qué sirve</h2>
+        <span class="exlabel">Trace de una llamada</span>
+        <div class="code">GET /books/{id}
+  Controller     → llama a       BookService.findById(id)
+  BookService    → llama a       BookRepository.findById(id)
+  BookRepository → consulta la fuente de datos y regresa el objeto
+  BookService    → aplica reglas (ej. ocultar libros dados de baja)
+  Controller     → convierte el resultado a JSON y arma la respuesta HTTP</div>
+        <ul class="list" style="gap:0.3rem">
+          <li>Cada capa tiene <strong>una sola responsabilidad</strong>: Controller habla HTTP, Service tiene las reglas, Repository habla con los datos.</li>
+          <li><strong>Service se puede probar</strong> sin levantar un servidor HTTP ni una base de datos real.</li>
+          <li>Cambiar de almacenamiento (memoria → base de datos) <strong>no debería tocar</strong> la lógica de negocio.</li>
+        </ul>
+      </section>
+
+      <!-- 11 -->
+      <section class="slide" data-section="contrato de endpoint" data-method="get" data-path="/books/{id}">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/books/{id}</span></div>
+        <h2>Contrato de un endpoint</h2>
+        <div class="twrap">
+          <table class="cmp">
+            <tbody>
+              <tr><th>Path params</th><td><code>id</code> (integer, requerido) — identificador del libro</td></tr>
+              <tr><th>Query params</th><td>— (no aplica en este endpoint)</td></tr>
+              <tr><th>Request body</th><td>— (GET no lleva body)</td></tr>
+              <tr><th>Respuesta éxito</th><td><span class="pill get" style="padding:.1rem .35rem">200</span> <code>{ "id", "title", "author", "available" }</code></td></tr>
+              <tr><th>Errores</th><td><span class="pill delete" style="padding:.1rem .35rem">404</span> no existe un libro con ese <code>id</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="lede">Diseñar el contrato <strong>antes</strong> de programar evita ambigüedad: qué entra, qué sale, y qué pasa cuando algo sale mal.</p>
+      </section>
+
+      <!-- 12 -->
+      <section class="slide" data-section="práctica guiada" data-method="post" data-path="/books">
+        <div class="ophead"><span class="pill post">POST</span><span class="path">/books</span></div>
+        <h2>Práctica guiada — Petstore, Postman y una biblioteca</h2>
+        <p class="lede">Exploramos <strong>Swagger Petstore</strong> en vivo, mandamos peticiones reales con <strong>Postman</strong> contra una API pública, y con esos datos observados completamos el contrato de 3 endpoints de una API de biblioteca.</p>
+        <div class="chips">
+          <span class="chip">petstore.swagger.io</span>
+          <span class="chip">Postman → reqres.in</span>
+          <span class="chip"><span class="pill get" style="padding:.08rem .3rem">GET</span>/<span class="pill post" style="padding:.08rem .3rem">POST</span>/<span class="pill delete" style="padding:.08rem .3rem">DELETE</span> /books</span>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section class="slide" data-section="ejercicio individual" data-method="post" data-path="/tickets">
+        <div class="ophead"><span class="pill post">POST</span><span class="path">/tickets</span></div>
+        <h2>Ejercicio individual — Diseña 3 endpoints</h2>
+        <p class="lede">Un dominio nuevo: un sistema de <strong>tickets de soporte</strong>. Tú decides el método y la ruta de cada uno — no se dan aquí a propósito — y diseñas el resto del contrato: params, body, respuestas y errores. Sin escribir código.</p>
+        <div class="chips">
+          <span class="chip">listar tickets</span>
+          <span class="chip">crear ticket</span>
+          <span class="chip">cerrar ticket</span>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section class="slide" data-section="tarea" data-method="get" data-path="/courses">
+        <div class="ophead"><span class="pill get">GET</span><span class="path">/courses</span></div>
+        <h2>Tarea — Contrato de una API pequeña</h2>
+        <p class="lede">Diseña 4–5 endpoints de una API para un dominio nuevo (catálogo de cursos), más el diagrama de recorrido de uno de ellos. Instrucciones completas en <code>tarea/README.md</code>.</p>
+      </section>
+
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span class="sb-path" id="sbPath">/</span>
+    <span class="runner" id="runner"></span>
+    <span class="count" id="sbCount">01 / 14</span>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="navbtn" id="prevBtn" aria-label="Anterior">&#8249;</button>
+  <span class="hint">&larr; &rarr; / espacio</span>
+  <button class="navbtn" id="nextBtn" aria-label="Siguiente">&#8250;</button>
+</div>
+
+<script>
+  (function () {
+    var slides = [].slice.call(document.querySelectorAll('.slide'));
+    var total = slides.length;
+    var current = 0;
+
+    var prevBtn = document.getElementById('prevBtn');
+    var nextBtn = document.getElementById('nextBtn');
+    var sbCount = document.getElementById('sbCount');
+    var sbPath = document.getElementById('sbPath');
+    var runner = document.getElementById('runner');
+    var toc = document.getElementById('toc');
+
+    // build the sidebar "collection" list from each slide's data attributes
+    var tocItems = slides.map(function (s, i) {
+      var method = s.getAttribute('data-method') || '';
+      var path = s.getAttribute('data-path') || '/';
+      var el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = (method
+        ? '<span class="mpill pill ' + method + '" style="padding:.06rem .3rem">' + method + '</span>'
+        : '<span class="mpill pill get" style="padding:.06rem .3rem;visibility:hidden">-</span>')
+        + '<span class="p">' + path + '</span>';
+      el.addEventListener('click', function () { go(i); });
+      toc.appendChild(el);
+      return el;
+    });
+
+    for (var j = 0; j < total; j++) runner.appendChild(document.createElement('i'));
+    var pips = [].slice.call(runner.children);
+
+    function pad(x) { return x < 10 ? '0' + x : '' + x; }
+
+    function render() {
+      slides.forEach(function (s, i) { s.classList.toggle('active', i === current); });
+      sbCount.textContent = pad(current + 1) + ' / ' + pad(total);
+      sbPath.textContent = slides[current].getAttribute('data-path') || '/';
+      pips.forEach(function (p, i) { p.classList.toggle('done', i <= current); });
+      tocItems.forEach(function (el, i) { el.classList.toggle('active', i === current); });
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === total - 1;
+    }
+    function go(i) { if (i < 0 || i >= total) return; current = i; render(); }
+
+    prevBtn.addEventListener('click', function () { go(current - 1); });
+    nextBtn.addEventListener('click', function () { go(current + 1); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(current + 1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); go(current - 1); }
+    });
+    render();
+  })();
+</script>
+</body>
+</html>
