@@ -8,48 +8,56 @@ package org.example;
  * an empty catch. Refactor it applying the clean-code practices from the theory slides
  * WITHOUT changing its behavior. The tests in PasswordPolicyTest must stay green.
  */
+
+
 public class PasswordPolicy {
 
-    public String check(String p, String u) {
-        String r = "";
-        int l = 0;
-        try {
-            l = p.length();
-        } catch (Exception e) {
+    private static final int MIN_PASSWORD_LENGTH = 8;
+
+    public String check(String password, String username) {
+
+        if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
+            return "TOO_SHORT";
         }
-        if (p == null) {
-            r = "TOO_SHORT";
-        } else {
-            if (l < 8) {
-                r = "TOO_SHORT";
-            } else {
-                boolean f1 = false;
-                for (int i = 0; i < p.length(); i++) {
-                    if (p.charAt(i) >= '0' && p.charAt(i) <= '9') {
-                        f1 = true;
-                    }
-                }
-                if (f1 == false) {
-                    r = "NO_DIGIT";
-                } else {
-                    boolean f2 = false;
-                    for (int i = 0; i < p.length(); i++) {
-                        if (p.charAt(i) >= 'A' && p.charAt(i) <= 'Z') {
-                            f2 = true;
-                        }
-                    }
-                    if (!f2) {
-                        r = "NO_UPPERCASE";
-                    } else {
-                        if (u != null && p.toLowerCase().contains(u.toLowerCase())) {
-                            r = "CONTAINS_USERNAME";
-                        } else {
-                            r = "OK";
-                        }
-                    }
-                }
+
+        if (!containsDigit(password)) {
+            return "NO_DIGIT";
+        }
+
+        if (!containsUppercase(password)) {
+            return "NO_UPPERCASE";
+        }
+
+        if (containsUsername(password, username)) {
+            return "CONTAINS_USERNAME";
+        }
+
+        return "OK";
+    }
+
+    private boolean containsDigit(String password) {
+        for (char character : password.toCharArray()) {
+            if (character >= '0' && character <= '9') {
+                return true;
             }
         }
-        return r;
+
+        return false;
+    }
+
+    private boolean containsUppercase(String password) {
+        for (char character : password.toCharArray()) {
+            if (character >= 'A' && character <= 'Z') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean containsUsername(String password, String username) {
+        return username != null
+                && password.toLowerCase().contains(username.toLowerCase());
     }
 }
+

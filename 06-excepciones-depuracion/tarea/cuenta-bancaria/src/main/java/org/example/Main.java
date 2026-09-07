@@ -3,9 +3,9 @@ package org.example;
 /** Reproduces two of the defects. Run it and read the output. */
 public class Main {
     public static void main(String[] args) {
-        BankAccount a = new BankAccount(100.0);
+        BankAccount a = new BankAccount(500.0);
         a.withdraw(150.0);
-        System.out.println("Balance after over-withdrawing 150 from 100: " + a.getBalance());
+        System.out.println("Balance after over-withdrawing 150 from 500: " + a.getBalance());
         // prints -50.0 -> the withdrawal should have been rejected
 
         BankAccount b = new BankAccount(100.0);
@@ -13,10 +13,18 @@ public class Main {
         System.out.println("Balance after depositing -30: " + b.getBalance());
         // prints 70.0 -> a negative deposit should have been rejected
 
-        BankAccount source = new BankAccount(50.0);
+        BankAccount source = new BankAccount(250.0);
         BankAccount dest = new BankAccount(0.0);
         source.transferTo(dest, 200.0);
         System.out.println("Source after transferring 200 it does not have: " + source.getBalance());
         // prints -150.0 -> transferTo bypasses the (missing) overdraft rule
+
+        try {
+            source.transferTo(dest, 250.0);
+        } catch (InsufficientFundsException e) {
+            System.out.println("Expected: " + e.getMessage());
+        }
     }
+
+
 }
