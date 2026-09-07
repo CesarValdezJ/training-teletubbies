@@ -1,3 +1,8 @@
+package personajes;
+
 public class Arco implements Arma {
-    public void infligirDano() { System.out.println("¡Fiu! Flecha disparada a distancia."); }
+
+    public void atacar(String objetivo) {
+        System.out.println("¡Atacando a " + objetivo + " con el arco!");
+    }
 }

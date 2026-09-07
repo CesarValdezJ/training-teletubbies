@@ -1,4 +1,6 @@
-// El arma inflige daño; atacar es una acción del personaje, no del arma.
+package personajes;
+
 public interface Arma {
-    void infligirDano();
+
+    void atacar( String objetivo);
 }

@@ -1,11 +1,11 @@
+
+
 public class Main {
     public static void main(String[] args) {
-        Personaje heroe = new Personaje("Héroe", new Espada());
-        heroe.atacar();
+        Personaje personaje = new Personaje("Guerrero", new Espada());
 
-        heroe.cambiarArma(new Arco());
-        heroe.atacar();
-
-        System.out.println("\nEl mismo objeto Personaje cambió de comportamiento al reemplazar su Arma en tiempo de ejecución.");
+        personaje.atacar("Enemigo");
+        personaje.cambioArma(new Arco());
+        personaje.atacar("Dragon");
     }
 }

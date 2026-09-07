@@ -1,4 +1,7 @@
-// Composición: Personaje TIENE UN Arma, y puede CAMBIARLA en tiempo de ejecución.
+package personajes;
+
+
+
 public class Personaje {
     private String nombre;
     private Arma arma;
@@ -8,13 +11,17 @@ public class Personaje {
         this.arma = arma;
     }
 
-    public void cambiarArma(Arma nuevaArma) {
-        this.arma = nuevaArma;
-        System.out.println(nombre + " cambia de arma.");
+    public void atacar(String objetivo) {
+        System.out.println(nombre + " está atacando a " + objetivo + " con su arma.");
+        arma.atacar(objetivo);
     }
 
-    public void atacar() {
-        System.out.print(nombre + " ataca -> ");
-        arma.infligirDano();
+    public void cambioArma(Arma nuevaArma) {
+        this.arma = nuevaArma;
+        System.out.println(nombre + " ha cambiado su arma.");
     }
+
+
+
+
 }
