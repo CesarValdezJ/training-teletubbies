@@ -20,7 +20,7 @@ paths:
       summary: Listar cursos disponibles
       operationId: listCourses
       tags:
-        - Cursos # <-- AGREGADO
+        - Cursos
       parameters:
         - $ref: './parameters.yaml#/instructor'
         - $ref: './parameters.yaml#/page'
@@ -35,7 +35,7 @@ paths:
       summary: Crear un curso nuevo
       operationId: createCourse
       tags:
-        - Cursos # <-- AGREGADO
+        - Cursos
       requestBody:
         $ref: './requests.yaml#/CourseInput'
       responses:
