@@ -10,11 +10,17 @@ info:
 servers:
   - url: /
 
+tags:
+  - name: Cursos
+    description: Operaciones relacionadas con el catálogo y gestión de cursos
+
 paths:
   /courses:
     get:
       summary: Listar cursos disponibles
       operationId: listCourses
+      tags:
+        - Cursos # <-- AGREGADO
       parameters:
         - $ref: './parameters.yaml#/instructor'
         - $ref: './parameters.yaml#/page'
@@ -28,6 +34,8 @@ paths:
     post:
       summary: Crear un curso nuevo
       operationId: createCourse
+      tags:
+        - Cursos # <-- AGREGADO
       requestBody:
         $ref: './requests.yaml#/CourseInput'
       responses:
@@ -40,6 +48,8 @@ paths:
     get:
       summary: Obtener el detalle de un curso
       operationId: getCourseById
+      tags:
+        - Cursos
       parameters:
         - $ref: './parameters.yaml#/courseId'
       responses:
@@ -54,6 +64,8 @@ paths:
       description: >
         Actualización completa: el body trae todos los campos editables.
         enrolledCount no se recibe del cliente, lo controla el servidor.
+      tags:
+        - Cursos
       parameters:
         - $ref: './parameters.yaml#/courseId'
       requestBody:
@@ -70,6 +82,8 @@ paths:
       summary: Actualizar parcialmente un curso existente
       operationId: patchCourse
       description: Actualización parcial — solo se actualizan los campos enviados.
+      tags:
+        - Cursos
       parameters:
         - $ref: './parameters.yaml#/courseId'
       requestBody:
@@ -85,6 +99,8 @@ paths:
     delete:
       summary: Eliminar un curso
       operationId: deleteCourse
+      tags:
+        - Cursos
       parameters:
         - $ref: './parameters.yaml#/courseId'
       responses:
@@ -97,6 +113,8 @@ paths:
     post:
       summary: Inscribir a un estudiante en un curso existente
       operationId: enrollStudent
+      tags:
+        - Cursos
       parameters:
         - $ref: './parameters.yaml#/courseId'
       requestBody:
