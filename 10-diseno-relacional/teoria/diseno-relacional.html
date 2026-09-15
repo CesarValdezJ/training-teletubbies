@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diseño relacional: entidades, llaves, normalización e índices</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap">
+
+<style>
+  /* ============ Tokens — "ER canvas" theme (lienzo de diagramación) ============ */
+  :root {
+    --bg:      #f7f7f5;
+    --panel:   #ffffff;
+    --panel-2: #eeeeea;
+    --ink:     #1d2024;
+    --dim:     #6d7178;
+    --line:    #e2e1db;
+    --line-2:  #cac9c0;
+
+    --dot: rgba(0,0,0,0.08);
+
+    --one:    #4f46e5; --one-bg:  rgba(79,70,229,0.10);
+    --many:   #a21caf; --many-bg: rgba(162,28,175,0.10);
+    --pk:     #b45309; --pk-bg:   rgba(180,83,9,0.12);
+    --fk:     #0d9488; --fk-bg:   rgba(13,148,136,0.10);
+    --good:   #15803d; --good-bg: rgba(21,128,61,0.10);
+    --bad:    #b91c1c; --bad-bg:  rgba(185,28,28,0.10);
+
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --sans: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:      #121316;
+      --panel:   #1b1d22;
+      --panel-2: #24262c;
+      --ink:     #e8e9ec;
+      --dim:     #90939c;
+      --line:    #2c2f36;
+      --line-2:  #3b3f48;
+      --dot: rgba(255,255,255,0.07);
+
+      --one:    #8b93ff; --one-bg:  rgba(139,147,255,0.14);
+      --many:   #e879f9; --many-bg: rgba(232,121,249,0.14);
+      --pk:     #f0a63a; --pk-bg:   rgba(240,166,58,0.16);
+      --fk:     #35c2b2; --fk-bg:   rgba(53,194,178,0.14);
+      --good:   #3fb950; --good-bg: rgba(63,185,80,0.14);
+      --bad:    #f85149; --bad-bg:  rgba(248,81,73,0.14);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font-family: var(--sans);
+    overflow: hidden;
+  }
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0.9rem; min-height: 100vh; padding: 1.2rem;
+    background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  h1, h2 { margin: 0; font-weight: 700; text-wrap: balance; }
+  p { margin: 0; text-wrap: pretty; }
+  code { font-family: var(--mono); font-size: 0.88em; }
+
+  /* ============ Canvas window ============ */
+  .win {
+    width: min(96vw, 1220px);
+    aspect-ratio: 16 / 9.2;
+    max-height: 86vh;
+    background: var(--panel);
+    border: 1px solid var(--line-2);
+    border-radius: 10px;
+    box-shadow: 0 24px 60px -30px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* toolbar — diagram-app chrome */
+  .toolbar {
+    height: 44px; flex: none;
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0 0.9rem;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--line-2);
+  }
+  .toolbar .tool {
+    width: 26px; height: 26px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line-2); background: var(--panel);
+    color: var(--dim);
+  }
+  .toolbar .tool svg { width: 14px; height: 14px; }
+  .toolbar .sep { width: 1px; height: 20px; background: var(--line-2); margin: 0 0.2rem; }
+  .toolbar .title {
+    margin-left: 0.3rem; font-family: var(--mono); font-size: 0.78rem; color: var(--ink); font-weight: 600;
+  }
+  .toolbar .filename {
+    margin-left: auto; font-family: var(--mono); font-size: 0.72rem; color: var(--dim);
+  }
+
+  /* body: toc + stage */
+  .frame { flex: 1; display: flex; min-height: 0; }
+
+  .toc {
+    flex: none; width: 220px;
+    background: var(--panel-2);
+    border-right: 1px solid var(--line-2);
+    padding: 0.6rem 0;
+    overflow-y: auto;
+  }
+  .toc .item {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    font-family: var(--mono); font-size: 0.72rem; color: var(--dim);
+  }
+  .toc .item .n { flex: none; opacity: 0.6; }
+  .toc .item.active { background: var(--panel); border-left-color: var(--one); color: var(--ink); }
+  .toc .item.active .n { color: var(--one); opacity: 1; }
+
+  .stage { position: relative; flex: 1; min-width: 0; background: var(--bg);
+    background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: clamp(0.7rem, 1.6vh, 1.3rem);
+    padding: clamp(1.4rem, 3.2vw, 2.6rem) clamp(1.7rem, 4vw, 3rem);
+    opacity: 0; transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .slide.active { opacity: 1; transform: none; pointer-events: auto; }
+  @media (prefers-reduced-motion: reduce) { .slide { transition: none; } }
+
+  .kicker { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); letter-spacing: 0.03em; }
+  .kicker::before { content: "◇ "; color: var(--one); }
+
+  .slide h2 {
+    font-size: clamp(1.3rem, 1.7vw + 0.8rem, 2rem);
+    line-height: 1.24; color: var(--ink);
+  }
+  .slide h2 code { color: var(--one); }
+
+  .lede {
+    font-size: clamp(0.88rem, 0.4vw + 0.8rem, 1rem);
+    color: var(--dim); max-width: 70ch; line-height: 1.6;
+  }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* badges */
+  .badge {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+    padding: 0.2rem 0.5rem; border-radius: 4px; flex: none;
+    letter-spacing: 0.02em;
+  }
+  .badge.pk   { background: var(--pk-bg);   color: var(--pk); }
+  .badge.fk   { background: var(--fk-bg);   color: var(--fk); }
+  .badge.one  { background: var(--one-bg);  color: var(--one); }
+  .badge.many { background: var(--many-bg); color: var(--many); }
+  .badge.good { background: var(--good-bg); color: var(--good); }
+  .badge.bad  { background: var(--bad-bg);  color: var(--bad); }
+
+  /* ============ Cover ============ */
+  .cover { align-items: flex-start; }
+  .cover .logo {
+    font-family: var(--mono); font-size: 0.78rem; color: var(--one);
+    border: 1px solid var(--one); border-radius: 5px; padding: 0.2rem 0.55rem;
+  }
+  .cover h1 {
+    font-size: clamp(1.6rem, 2.6vw + 1rem, 2.5rem);
+    line-height: 1.22; letter-spacing: -0.01em;
+  }
+  .cover .meta {
+    font-family: var(--mono); font-size: 0.74rem; color: var(--dim);
+    display: flex; flex-wrap: wrap; gap: 1.1rem; margin-top: 0.2rem;
+  }
+  .cover .meta b { color: var(--one); font-weight: 500; }
+
+  /* ============ Entity box (mini table mockup) ============ */
+  .entity {
+    border: 1px solid var(--line-2); border-radius: 8px;
+    background: var(--panel); overflow: hidden; min-width: 168px;
+    box-shadow: 0 6px 16px -10px rgba(0,0,0,0.3);
+  }
+  .entity .ehead {
+    background: var(--panel-2); padding: 0.4rem 0.65rem;
+    font-family: var(--mono); font-weight: 700; font-size: 0.82rem;
+    border-bottom: 1px solid var(--line-2); color: var(--ink);
+  }
+  .entity .erow {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.65rem; font-family: var(--mono); font-size: 0.74rem;
+    border-top: 1px solid var(--line);
+  }
+  .entity .erow:first-of-type { border-top: none; }
+  .entity .erow .tag {
+    font-size: 0.6rem; font-weight: 700; padding: 0.04rem 0.28rem;
+    border-radius: 3px; flex: none;
+  }
+  .entity .erow .tag.pk { background: var(--pk-bg); color: var(--pk); }
+  .entity .erow .tag.fk { background: var(--fk-bg); color: var(--fk); }
+  .entity .erow .col { color: var(--ink); }
+  .entity .erow .type { color: var(--dim); margin-left: auto; font-size: 0.68rem; }
+
+  /* ============ Relationship mini-diagram ============ */
+  .reldiagram { display: flex; align-items: center; justify-content: center; gap: 0; }
+  .relend {
+    font-family: var(--mono); font-weight: 700; font-size: 0.78rem;
+    padding: 0.15rem 0.42rem; border-radius: 4px; flex: none;
+  }
+  .relend.one  { color: var(--one);  background: var(--one-bg); }
+  .relend.many { color: var(--many); background: var(--many-bg); }
+  .relline { flex: 1; position: relative; height: 2px; background: var(--line-2); margin: 0 0.5rem; min-width: 46px; }
+  .relline .lbl {
+    position: absolute; top: -1.35rem; left: 50%; transform: translateX(-50%);
+    font-family: var(--sans); font-size: 0.68rem; color: var(--dim); white-space: nowrap;
+  }
+
+  .relgrid { display: flex; flex-direction: column; gap: 1.4rem; }
+  .relrow { display: flex; align-items: center; gap: 0.9rem; }
+  .relrow .tag {
+    font-family: var(--mono); font-size: 0.7rem; font-weight: 700; color: var(--dim);
+    width: 34px; flex: none;
+  }
+
+  /* ============ Cards / grid ============ */
+  .grid { display: grid; gap: 0.8rem; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+
+  .card {
+    border: 1px solid var(--line); border-radius: 7px;
+    background: var(--panel-2); padding: 0.8rem 0.9rem;
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .card .t { font-family: var(--mono); font-size: 0.86rem; font-weight: 700; color: var(--ink); }
+  .card .d { font-size: 0.79rem; color: var(--dim); line-height: 1.45; }
+  .card.k-one  { border-top: 3px solid var(--one); }
+  .card.k-many { border-top: 3px solid var(--many); }
+  .card.k-pk   { border-top: 3px solid var(--pk); }
+  .card.k-good { border-top: 3px solid var(--good); }
+
+  /* list */
+  ul.list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+  ul.list li { font-size: 0.87rem; color: var(--dim); line-height: 1.5; padding-left: 1.4rem; position: relative; }
+  ul.list li::before { content: "◆"; position: absolute; left: 0; color: var(--one); font-size: 0.6em; top: 0.35em; }
+  ul.list li strong { color: var(--ink); font-weight: 600; }
+
+  ol.agenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  ol.agenda li { display: flex; align-items: baseline; gap: 0.75rem; font-size: 0.95rem; color: var(--ink); }
+  ol.agenda .n { font-family: var(--mono); font-size: 0.78rem; color: var(--one); }
+  ol.agenda .n::before { content: "0" attr(data-i) "  "; }
+
+  /* table */
+  .twrap { overflow-x: auto; }
+  table.cmp { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+  table.cmp th, table.cmp td {
+    border-bottom: 1px solid var(--line); padding: 0.5rem 0.7rem;
+    text-align: left; vertical-align: top;
+  }
+  table.cmp thead th {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--dim); background: var(--panel-2); font-weight: 500;
+    border-bottom: 1px solid var(--line-2);
+  }
+  table.cmp tbody th { font-family: var(--mono); font-weight: 600; width: 12%; color: var(--ink); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip {
+    font-family: var(--mono); font-size: 0.74rem; color: var(--ink);
+    border: 1px solid var(--line-2); background: var(--panel-2);
+    border-radius: 5px; padding: 0.3rem 0.6rem;
+  }
+
+  .exlabel {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--dim); display: block; margin-bottom: 0.3rem;
+  }
+  .code {
+    font-family: var(--mono); font-size: 0.78rem; line-height: 1.6;
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 7px; padding: 0.7rem 0.9rem;
+    overflow-x: auto; white-space: pre; color: var(--ink);
+  }
+  .code .c { color: var(--dim); }
+  .code .k { color: var(--one); }
+  .code .str { color: var(--fk); }
+
+  /* ============ Status bar ============ */
+  .statusbar {
+    height: 32px; flex: none;
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0 0.9rem;
+    background: var(--one);
+    color: #fff;
+    font-family: var(--mono); font-size: 0.7rem;
+  }
+  .statusbar .sb-sec { flex: 1; opacity: 0.95; }
+  .statusbar .runner { display: flex; gap: 4px; align-items: center; }
+  .statusbar .runner i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); display: block; }
+  .statusbar .runner i.done { background: #fff; }
+  .statusbar .count { font-variant-numeric: tabular-nums; opacity: 0.95; }
+
+  /* ============ Controls ============ */
+  .controls { display: flex; align-items: center; gap: 0.8rem; }
+  .navbtn {
+    width: 32px; height: 32px; border-radius: 6px;
+    border: 1px solid var(--line-2); background: var(--panel); color: var(--ink);
+    font-family: var(--mono); font-size: 0.95rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .navbtn:hover { border-color: var(--one); color: var(--one); }
+  .navbtn:focus-visible { outline: 2px solid var(--one); outline-offset: 2px; }
+  .navbtn:disabled { opacity: 0.3; cursor: default; }
+  .hint { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); }
+
+  @media (max-width: 760px) {
+    .g2, .g3, .g4 { grid-template-columns: 1fr; }
+    .toc { display: none; }
+    .relrow { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="win">
+  <div class="toolbar">
+    <span class="tool" title="seleccionar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 16 2-7 7-2z"/></svg></span>
+    <span class="tool" title="entidad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="14" rx="1"/><line x1="4" y1="10" x2="20" y2="10"/></svg></span>
+    <span class="tool" title="relación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><line x1="7" y1="12" x2="17" y2="12"/></svg></span>
+    <span class="tool" title="llave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="3"/><line x1="11" y1="12" x2="21" y2="12"/><line x1="17" y1="12" x2="17" y2="16"/></svg></span>
+    <span class="sep"></span>
+    <span class="title">sesión 10 — diseño relacional</span>
+    <span class="filename">library-schema.erd</span>
+  </div>
+
+  <div class="frame">
+    <nav class="toc" id="toc"></nav>
+
+    <div class="stage" id="stage">
+
+      <!-- 1 -->
+      <section class="slide cover" data-section="portada">
+        <span class="logo">SQL · sesión teórica</span>
+        <h1>Diseño relacional:<br>entidades, llaves,<br>normalización e índices</h1>
+        <p class="lede">Fundamentos de diseño de datos antes de escribir consultas o incorporar un ORM. Se diseña con diagramas — nada de código ni SQL todavía.</p>
+        <div class="meta">
+          <span><b>20</b> min</span>
+          <span><b>antes</b> de la práctica guiada</span>
+          <span><b>sin código</b> — solo diagramas</span>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section class="slide" data-section="agenda">
+        <span class="kicker">hoy</span>
+        <h2>Agenda</h2>
+        <ol class="agenda">
+          <li><span class="n" data-i="1"></span> Entidades, atributos y llaves (PK / FK)</li>
+          <li><span class="n" data-i="2"></span> Diagrama entidad-relación (conceptual) vs. diagrama relacional (lógico)</li>
+          <li><span class="n" data-i="3"></span> Tipos de relación — 1:1, 1:N, N:N</li>
+          <li><span class="n" data-i="4"></span> Normalización — 1FN, 2FN, 3FN</li>
+          <li><span class="n" data-i="5"></span> Índices — qué son y cuándo ayudan</li>
+        </ol>
+        <p class="lede">Objetivo: un <strong>modelo relacional de 3–5 tablas con decisiones justificadas</strong> — normalizar un modelo inicial y justificar dos índices según las consultas esperadas.</p>
+      </section>
+
+      <!-- 3 -->
+      <section class="slide" data-section="entidades y atributos">
+        <span class="kicker">entidades · 01</span>
+        <h2>¿Qué es una entidad?</h2>
+        <p class="lede">Una <strong>entidad</strong> es una persona, objeto o evento del dominio del que queremos guardar información: un libro, un socio, un préstamo. En el modelo relacional se convierte en una <strong>tabla</strong>; cada instancia concreta (un libro específico) es una <strong>fila</strong>, y cada dato que guardamos de ella (título, ISBN) es un <strong>atributo</strong> — una <strong>columna</strong>.</p>
+        <div class="entity" style="align-self:flex-start">
+          <div class="ehead">Book</div>
+          <div class="erow"><span class="tag pk">PK</span><span class="col">id</span><span class="type">integer</span></div>
+          <div class="erow"><span class="col">title</span><span class="type">varchar</span></div>
+          <div class="erow"><span class="col">isbn</span><span class="type">varchar</span></div>
+        </div>
+        <p class="lede" style="font-size:0.82rem">Regla práctica: si necesitas guardar varios datos sobre "algo" y ese algo se repite (varios libros, varios socios), probablemente es una entidad.</p>
+      </section>
+
+      <!-- 4 -->
+      <section class="slide" data-section="llaves">
+        <span class="kicker">llaves · 01</span>
+        <h2><span class="badge pk">PK</span> y <span class="badge fk">FK</span> — cómo se identifican y se conectan las filas</h2>
+        <div class="grid g2">
+          <div class="card k-pk"><span class="t">Primary Key (PK)</span><span class="d">Identifica de forma única cada fila de una tabla. No se repite, no cambia. Puede ser <strong>natural</strong> (un dato del dominio, como un ISBN) o <strong>surrogate</strong> (un id autogenerado, sin significado de negocio).</span></div>
+          <div class="card" style="border-top:3px solid var(--fk)"><span class="t">Foreign Key (FK)</span><span class="d">Una columna que referencia la PK de <em>otra</em> tabla — así es como una fila "apunta" a otra. Es lo que conecta <code>Book.author_id</code> con <code>Author.id</code>.</span></div>
+        </div>
+        <p class="lede" style="font-size:0.82rem"><strong>Llave compuesta:</strong> cuando la PK necesita más de una columna para ser única — típico en tablas puente (lo vemos en N:N).</p>
+      </section>
+
+      <!-- 5 -->
+      <section class="slide" data-section="er vs relacional">
+        <span class="kicker">diagramas · 02</span>
+        <h2>Diagrama entidad-relación vs. diagrama relacional</h2>
+        <div class="grid g2">
+          <div class="card k-one"><span class="t">ER conceptual</span><span class="d">Muestra el dominio como lo piensa el negocio: "un <strong>Book</strong> puede ser prestado por muchos <strong>Member</strong>, y un Member pide prestados muchos Book" — una relación <strong>N:N</strong> directa, sin preocuparse todavía de cómo se implementa.</span></div>
+          <div class="card k-many"><span class="t">Relacional (lógico)</span><span class="d">Es implementable: el N:N <strong>no existe como tal en SQL</strong>, se resuelve con una <strong>tabla puente</strong> (<code>Loan</code>) que tiene una FK hacia cada lado. El diagrama ER se traduce a esto antes de crear las tablas.</span></div>
+        </div>
+        <p class="lede">Vamos a ver los tres tipos de relación y, al final, cómo se ve esta traducción completa en un ejemplo real.</p>
+      </section>
+
+      <!-- 6 -->
+      <section class="slide" data-section="notación">
+        <span class="kicker">diagramas · 02</span>
+        <h2>Cómo leer un diagrama de relaciones</h2>
+        <p class="lede">Cada extremo de una línea entre dos entidades dice <strong>cuántas</strong> filas del otro lado pueden participar:</p>
+        <div class="reldiagram" style="margin-top:0.4rem">
+          <span class="relend one">1</span>
+          <div class="relline"><span class="lbl">una entidad tiene exactamente una del otro lado</span></div>
+          <span class="relend one">1</span>
+        </div>
+        <div class="reldiagram" style="margin-top:1.6rem">
+          <span class="relend one">1</span>
+          <div class="relline"><span class="lbl">una entidad tiene cero, una o muchas del otro lado</span></div>
+          <span class="relend many">N</span>
+        </div>
+        <div class="reldiagram" style="margin-top:1.6rem">
+          <span class="relend many">N</span>
+          <div class="relline"><span class="lbl">muchas de un lado se relacionan con muchas del otro</span></div>
+          <span class="relend many">N</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section class="slide" data-section="relación 1:1">
+        <span class="kicker">relaciones · 03</span>
+        <h2>Relación <span class="badge one">1:1</span></h2>
+        <p class="lede">Cada fila de una tabla se relaciona con <strong>como mucho una</strong> fila de la otra, y viceversa. Es la menos común — casi siempre significa que esos datos podrían vivir en la misma tabla, y se separan solo por una razón concreta (ej. datos opcionales o sensibles).</p>
+        <div class="reldiagram">
+          <div class="entity">
+            <div class="ehead">Member</div>
+            <div class="erow"><span class="tag pk">PK</span><span class="col">id</span></div>
+            <div class="erow"><span class="col">name</span></div>
+          </div>
+          <span class="relend one">1</span>
+          <div class="relline"><span class="lbl">tiene</span></div>
+          <span class="relend one">1</span>
+          <div class="entity">
+            <div class="ehead">MemberProfile</div>
+            <div class="erow"><span class="tag pk">PK</span><span class="tag fk">FK</span><span class="col">member_id</span></div>
+            <div class="erow"><span class="col">bio</span></div>
+          </div>
+        </div>
+        <p class="lede" style="font-size:0.82rem">Aquí la FK <em>es también</em> la PK de <code>MemberProfile</code> — así se garantiza que exista como mucho un perfil por socio.</p>
+      </section>
+
+      <!-- 8 -->
+      <section class="slide" data-section="relación 1:n">
+        <span class="kicker">relaciones · 03</span>
+        <h2>Relación <span class="badge one">1</span>:<span class="badge many">N</span></h2>
+        <p class="lede">La más frecuente. Una fila de un lado se relaciona con <strong>varias</strong> filas del otro, pero cada fila del lado "N" solo pertenece a una del lado "1". La FK siempre vive del lado <strong>N</strong>.</p>
+        <div class="reldiagram">
+          <div class="entity">
+            <div class="ehead">Author</div>
+            <div class="erow"><span class="tag pk">PK</span><span class="col">id</span></div>
+            <div class="erow"><span class="col">name</span></div>
+          </div>
+          <span class="relend one">1</span>
+          <div class="relline"><span class="lbl">escribe</span></div>
+          <span class="relend many">N</span>
+          <div class="entity">
+            <div class="ehead">Book</div>
+            <div class="erow"><span class="tag pk">PK</span><span class="col">id</span></div>
+            <div class="erow"><span class="tag fk">FK</span><span class="col">author_id</span></div>
+            <div class="erow"><span class="col">title</span></div>
+          </div>
+        </div>
+        <p class="lede" style="font-size:0.82rem">Un autor escribe muchos libros; cada libro tiene un solo autor (en este modelo). Por eso <code>author_id</code> vive en <code>Book</code>, no al revés.</p>
+      </section>
+
+      <!-- 9 -->
+      <section class="slide" data-section="relación n:n">
+        <span class="kicker">relaciones · 03</span>
+        <h2>Relación <span class="badge many">N:N</span> — y su tabla puente</h2>
+        <p class="lede">Muchas filas de un lado se relacionan con muchas del otro. SQL no puede modelar esto directamente con una sola FK — se resuelve con una <strong>tabla puente</strong> (o asociativa) que tiene una FK hacia cada entidad.</p>
+        <div class="reldiagram">
+          <div class="entity">
+            <div class="ehead">Book</div>
+            <div class="erow"><span class="tag pk">PK</span><span class="col">id</span></div>
+          </div>
+          <span class="relend one">1</span>
+          <div class="relline"><span class="lbl">es prestado en</span></div>
+          <span class="relend many">N</span>
+          <div class="entity">
+            <div class="ehead">Loan</div>
+            <div class="erow"><span class="tag pk">PK</span><span class="col">id</span></div>
+            <div class="erow"><span class="tag fk">FK</span><span class="col">book_id</span></div>
+            <div class="erow"><span class="tag fk">FK</span><span class="col">member_id</span></div>
+            <div class="erow"><span class="col">loan_date</span></div>
+          </div>
+          <span class="relend many">N</span>
+          <div class="relline"><span class="lbl">pide prestado en</span></div>
+          <span class="relend one">1</span>
+          <div class="entity">
+            <div class="ehead">Member</div>
+            <div class="erow"><span class="tag pk">PK</span><span class="col">id</span></div>
+          </div>
+        </div>
+        <p class="lede" style="font-size:0.82rem"><code>Loan</code> convierte el N:N conceptual (Book↔Member) en dos relaciones 1:N — y de paso guarda los datos propios de <em>cada</em> préstamo (fecha, devolución) que no pertenecen ni a Book ni a Member.</p>
+        <div class="grid g2">
+          <div class="card k-pk"><span class="t">PK compuesta (book_id, member_id)</span><span class="d">Alcanza cuando el par solo puede existir <strong>una vez</strong> — ej. "a qué categorías pertenece un curso": un curso no está dos veces en la misma categoría.</span></div>
+          <div class="card" style="border-top:3px solid var(--fk)"><span class="t">PK propia (surrogate)</span><span class="d">Hace falta cuando el par se puede <strong>repetir</strong> en el tiempo — un socio puede volver a pedir el mismo libro. Aquí <code>(book_id, member_id)</code> ya no identifica una fila única.</span></div>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section class="slide" data-section="ejemplo completo">
+        <span class="kicker">ejemplo · 04</span>
+        <h2>Ejemplo completo — biblioteca (4 tablas)</h2>
+        <p class="lede" style="font-size:0.85rem">Juntando las tres relaciones anteriores: así se ve un modelo relacional completo.</p>
+        <div class="code">Author  ||--o{ Book   : writes
+Book    ||--o{ Loan   : "is loaned in"
+Member  ||--o{ Loan   : "borrows in"</div>
+        <div class="chips">
+          <span class="chip">Author (1) → Book (N)</span>
+          <span class="chip">Book (1) → Loan (N)</span>
+          <span class="chip">Member (1) → Loan (N)</span>
+        </div>
+        <p class="lede" style="font-size:0.82rem">4 tablas, 3 relaciones 1:N, un N:N resuelto — exactamente el rango que se espera en el ejercicio de esta sesión.</p>
+      </section>
+
+      <!-- 11 -->
+      <section class="slide" data-section="normalización">
+        <span class="kicker">normalización · 05</span>
+        <h2>¿Por qué normalizar?</h2>
+        <p class="lede">Normalizar es reorganizar una tabla para eliminar <strong>redundancia</strong> — el mismo dato repetido en varias filas — porque la redundancia produce anomalías. Los tres ejemplos de abajo son defectos de la <strong>tabla plana</strong> (todo en una sola fila) — al separar en tablas propias, los tres desaparecen:</p>
+        <div class="grid g3">
+          <div class="card" style="border-top:3px solid var(--bad)"><span class="t">Anomalía de actualización</span><span class="d">En la tabla plana: cambias el email de un autor en una fila y se te olvida en las otras 4 — quedan inconsistentes.</span></div>
+          <div class="card" style="border-top:3px solid var(--bad)"><span class="t">Anomalía de inserción</span><span class="d">En la tabla plana: no puedes registrar un autor nuevo sin inventarte también un libro, un socio y una fecha de préstamo. Con <code>Author</code> en su propia tabla, un autor existe aunque todavía no tenga libros.</span></div>
+          <div class="card" style="border-top:3px solid var(--bad)"><span class="t">Anomalía de eliminación</span><span class="d">En la tabla plana: borras el único préstamo de un autor y pierdes también todos sus datos — no había dónde más guardarlos.</span></div>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section class="slide" data-section="1fn 2fn 3fn">
+        <span class="kicker">normalización · 05</span>
+        <h2>El recorrido — 1FN → 2FN → 3FN</h2>
+        <div class="twrap">
+          <table class="cmp">
+            <thead><tr><th>forma</th><th>exige</th><th>violación típica</th></tr></thead>
+            <tbody>
+              <tr><th>1FN</th><td>Valores atómicos, sin grupos repetidos ni celdas multivaluadas</td><td><code>level: "beginner, intermediate"</code> en una sola celda</td></tr>
+              <tr><th>2FN</th><td>(con llave compuesta) cada columna depende de <strong>toda</strong> la llave, no de una parte</td><td>en una tabla con llave <code>(course_id, student_id)</code>, guardar <code>course_name</code> — depende solo de <code>course_id</code></td></tr>
+              <tr><th>3FN</th><td>Ninguna columna depende de otra columna que <strong>no</strong> sea la llave (sin dependencias transitivas)</td><td>guardar <code>category</code> y <code>category_description</code> juntos — la descripción depende de la categoría, no del id de la fila</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="lede" style="font-size:0.82rem">En la práctica: si una columna se puede deducir de otra columna que no es la llave, sepárala en su propia tabla.</p>
+      </section>
+
+      <!-- 13 -->
+      <section class="slide" data-section="índices">
+        <span class="kicker">índices · 06</span>
+        <h2>Índices — cuándo ayudan</h2>
+        <p class="lede">Un índice es una estructura extra que la base de datos mantiene para <strong>encontrar filas más rápido</strong> sin recorrer la tabla completa — a cambio de espacio en disco y de un poco más de trabajo en cada escritura.</p>
+        <div class="grid g2">
+          <div class="card k-good"><span class="t">Indexar cuando...</span><span class="d">la columna aparece en un <code>WHERE</code>, un <code>JOIN</code> o un <code>ORDER BY</code> frecuente, y tiene <strong>alta selectividad</strong> (muchos valores distintos, como un email).</span></div>
+          <div class="card" style="border-top:3px solid var(--bad)"><span class="t">No suele valer la pena...</span><span class="d">en columnas de <strong>baja selectividad</strong> (pocos valores posibles, como <code>level</code> con 3 valores) o que casi nunca se filtran.</span></div>
+        </div>
+        <ul class="list">
+          <li>Toda <strong>FK</strong> que se use para hacer <code>JOIN</code> es candidata natural a índice.</li>
+          <li>Un <strong>UNIQUE</strong> (ej. email) ya trae su propio índice — no hace falta uno adicional.</li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section class="slide" data-section="práctica guiada">
+        <span class="kicker">sigue</span>
+        <h2>Práctica guiada — normalizar la biblioteca en vivo</h2>
+        <p class="lede">Partimos de una tabla plana de préstamos (con toda la redundancia del mundo real) y la normalizamos juntos en <strong>mermaid.live</strong> hasta llegar a las 4 tablas de <code>Author</code>/<code>Book</code>/<code>Member</code>/<code>Loan</code> — justificando en el camino 2 índices según las consultas que la app necesita responder.</p>
+        <div class="chips">
+          <span class="chip">mermaid.live</span>
+          <span class="chip">tabla plana → 3FN</span>
+          <span class="chip">2 índices justificados</span>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section class="slide" data-section="ejercicio individual">
+        <span class="kicker">después</span>
+        <h2>Ejercicio individual — clínica veterinaria</h2>
+        <p class="lede">Un dominio nuevo, mismo ejercicio por tu cuenta: normalizar una tabla plana de citas veterinarias hasta un modelo de 3–5 tablas, y justificar 2 índices según las consultas esperadas.</p>
+        <div class="chips">
+          <span class="chip">Owner · Pet · Vet · Appointment</span>
+          <span class="chip">1:N y N:N con tabla puente</span>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section class="slide" data-section="tarea">
+        <span class="kicker">para la próxima sesión</span>
+        <h2>Tarea — agregar Instructor a tu Course</h2>
+        <p class="lede">Aplicas todo lo visto hoy a tu <strong>propio proyecto</strong>: diseña cómo se vería agregar la entidad <code>Instructor</code> al <code>Course</code> que ya tienes — la relación, las llaves, y 2 índices justificados. Instrucciones completas en <code>tarea/README.md</code>.</p>
+      </section>
+
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span>&#9671; sesion-10</span>
+    <span class="sb-sec" id="sbSection">portada</span>
+    <span class="runner" id="runner"></span>
+    <span class="count" id="sbCount">01 / 16</span>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="navbtn" id="prevBtn" aria-label="Anterior">&#8249;</button>
+  <span class="hint">&larr; &rarr; / espacio</span>
+  <button class="navbtn" id="nextBtn" aria-label="Siguiente">&#8250;</button>
+</div>
+
+<script>
+  (function () {
+    var slides = [].slice.call(document.querySelectorAll('.slide'));
+    var total = slides.length;
+    var current = 0;
+
+    var prevBtn = document.getElementById('prevBtn');
+    var nextBtn = document.getElementById('nextBtn');
+    var sbCount = document.getElementById('sbCount');
+    var sbSection = document.getElementById('sbSection');
+    var runner = document.getElementById('runner');
+    var toc = document.getElementById('toc');
+
+    var tocItems = slides.map(function (s, i) {
+      var section = s.getAttribute('data-section') || '';
+      var el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = '<span class="n">' + (i + 1 < 10 ? '0' + (i + 1) : (i + 1)) + '</span><span>' + section + '</span>';
+      el.addEventListener('click', function () { go(i); });
+      toc.appendChild(el);
+      return el;
+    });
+
+    for (var j = 0; j < total; j++) runner.appendChild(document.createElement('i'));
+    var pips = [].slice.call(runner.children);
+
+    function pad(x) { return x < 10 ? '0' + x : '' + x; }
+
+    function render() {
+      slides.forEach(function (s, i) { s.classList.toggle('active', i === current); });
+      sbCount.textContent = pad(current + 1) + ' / ' + pad(total);
+      sbSection.textContent = slides[current].getAttribute('data-section') || '';
+      pips.forEach(function (p, i) { p.classList.toggle('done', i <= current); });
+      tocItems.forEach(function (el, i) { el.classList.toggle('active', i === current); });
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === total - 1;
+    }
+    function go(i) { if (i < 0 || i >= total) return; current = i; render(); }
+
+    prevBtn.addEventListener('click', function () { go(current - 1); });
+    nextBtn.addEventListener('click', function () { go(current + 1); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(current + 1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); go(current - 1); }
+    });
+    render();
+  })();
+</script>
+</body>
+</html>
