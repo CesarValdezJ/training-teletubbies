@@ -1,0 +1,130 @@
+openapi: 3.0.3
+info:
+  title: API de Catálogo de Cursos — tarea
+  description: >
+    Contrato de la API implementada en com.teletubbies.tarea.
+    Spec dividida en parameters.yaml, requests.yaml, resources.yaml
+    y responses.yaml — este archivo solo define los paths.
+  version: "1.0.0"
+
+servers:
+  - url: /
+
+tags:
+  - name: Cursos
+    description: Operaciones relacionadas con el catálogo y gestión de cursos
+
+paths:
+  /courses:
+    get:
+      summary: Listar cursos disponibles
+      operationId: listCourses
+      tags:
+        - Cursos
+      parameters:
+        - $ref: './parameters.yaml#/instructor'
+        - $ref: './parameters.yaml#/page'
+        - $ref: './parameters.yaml#/pageSize'
+      responses:
+        '200':
+          $ref: './responses.yaml#/CourseList'
+        '400':
+          $ref: './responses.yaml#/BadRequest'
+
+    post:
+      summary: Crear un curso nuevo
+      operationId: createCourse
+      tags:
+        - Cursos
+      requestBody:
+        $ref: './requests.yaml#/CourseInput'
+      responses:
+        '201':
+          $ref: './responses.yaml#/CourseCreated'
+        '400':
+          $ref: './responses.yaml#/BadRequest'
+
+  /courses/{id}:
+    get:
+      summary: Obtener el detalle de un curso
+      operationId: getCourseById
+      tags:
+        - Cursos
+      parameters:
+        - $ref: './parameters.yaml#/courseId'
+      responses:
+        '200':
+          $ref: './responses.yaml#/CourseFound'
+        '404':
+          $ref: './responses.yaml#/NotFound'
+
+    put:
+      summary: Reemplazar por completo un curso existente
+      operationId: updateCourse
+      description: >
+        Actualización completa: el body trae todos los campos editables.
+        enrolledCount no se recibe del cliente, lo controla el servidor.
+      tags:
+        - Cursos
+      parameters:
+        - $ref: './parameters.yaml#/courseId'
+      requestBody:
+        $ref: './requests.yaml#/CourseInput'
+      responses:
+        '200':
+          $ref: './responses.yaml#/CourseUpdated'
+        '400':
+          $ref: './responses.yaml#/BadRequest'
+        '404':
+          $ref: './responses.yaml#/NotFound'
+
+    patch:
+      summary: Actualizar parcialmente un curso existente
+      operationId: patchCourse
+      description: Actualización parcial — solo se actualizan los campos enviados.
+      tags:
+        - Cursos
+      parameters:
+        - $ref: './parameters.yaml#/courseId'
+      requestBody:
+        $ref: './requests.yaml#/CoursePatch'
+      responses:
+        '200':
+          $ref: './responses.yaml#/CourseUpdated'
+        '400':
+          $ref: './responses.yaml#/BadRequest'
+        '404':
+          $ref: './responses.yaml#/NotFound'
+
+    delete:
+      summary: Eliminar un curso
+      operationId: deleteCourse
+      tags:
+        - Cursos
+      parameters:
+        - $ref: './parameters.yaml#/courseId'
+      responses:
+        '204':
+          description: Curso eliminado. Sin body de vuelta.
+        '404':
+          $ref: './responses.yaml#/NotFound'
+
+  /courses/{id}/enrollments:
+    post:
+      summary: Inscribir a un estudiante en un curso existente
+      operationId: enrollStudent
+      tags:
+        - Cursos
+      parameters:
+        - $ref: './parameters.yaml#/courseId'
+      requestBody:
+        $ref: './requests.yaml#/EnrollmentInput'
+      responses:
+        '201':
+          $ref: './responses.yaml#/EnrollmentCreated'
+        '400':
+          $ref: './responses.yaml#/BadRequest'
+        '404':
+          $ref: './responses.yaml#/NotFound'
+        '409':
+          $ref: './responses.yaml#/CourseFull'

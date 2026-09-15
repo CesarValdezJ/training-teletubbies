@@ -1,0 +1,37 @@
+Course:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    title:
+      type: string
+    instructor:
+      type: string
+    capacity:
+      type: integer
+    enrolledCount:
+      type: integer
+  required: [id, title, instructor, capacity, enrolledCount]
+
+Enrollment:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+    courseId:
+      type: string
+      format: uuid
+    studentName:
+      type: string
+  required: [id, courseId, studentName]
+
+Error:
+  type: object
+  properties:
+    code:
+      type: string
+    message:
+      type: string
+  required: [code, message]

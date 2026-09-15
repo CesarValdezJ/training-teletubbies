@@ -1,0 +1,76 @@
+CourseList:
+  description: Página de cursos.
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: './resources.yaml#/Course'
+          page:
+            type: integer
+          pageSize:
+            type: integer
+          totalItems:
+            type: integer
+          totalPages:
+            type: integer
+
+CourseFound:
+  description: Curso encontrado.
+  content:
+    application/json:
+      schema:
+        $ref: './resources.yaml#/Course'
+
+CourseCreated:
+  description: Curso creado.
+  headers:
+    Location:
+      schema:
+        type: string
+  content:
+    application/json:
+      schema:
+        $ref: './resources.yaml#/Course'
+
+CourseUpdated:
+  description: Curso actualizado.
+  content:
+    application/json:
+      schema:
+        $ref: './resources.yaml#/Course'
+
+EnrollmentCreated:
+  description: Inscripción creada.
+  headers:
+    Location:
+      schema:
+        type: string
+  content:
+    application/json:
+      schema:
+        $ref: './resources.yaml#/Enrollment'
+
+BadRequest:
+  description: Request mal formado.
+  content:
+    application/json:
+      schema:
+        $ref: './resources.yaml#/Error'
+
+NotFound:
+  description: Recurso no encontrado.
+  content:
+    application/json:
+      schema:
+        $ref: './resources.yaml#/Error'
+
+CourseFull:
+  description: El curso ya está lleno (enrolledCount == capacity).
+  content:
+    application/json:
+      schema:
+        $ref: './resources.yaml#/Error'
